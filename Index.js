@@ -6,6 +6,16 @@ app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
+let crypto = require("crypto-js");
+var decrypter = require("./decrypter");
+
+var dbConnector = require("./dbconnector");
+
+dbConnector.connectToDB(() => {
+  app.listen("3001", () => {
+    console.log("PORT is running on 8000");
+  });
+});
 var allusers = [];
 var id = 0;
 
@@ -23,8 +33,8 @@ app.get("/login", (req, res) => {
     res.json({ error: "User not found" });
   }
 });
-app.listen(3001, () => {
-  console.log("port 3001");
+app.listen(8000, () => {
+  console.log("port 8000");
 });
 
 app.get("/user", (req, res) => {
@@ -32,23 +42,77 @@ app.get("/user", (req, res) => {
 });
 
 app.post("/user", (req, res) => {
-  //console.log(req);
-  var firstname = req.body.first_name;
-  var lastname = req.body.last_name;
+  try {
+    var a = req.body;
+    //console.log(a);
+    for (var userbody of a) {
+      //console.log(userbody);
+      var firstname = userbody.first_name;
+      var lastname = userbody.last_name;
 
-  for (var user of allusers) {
-    if (user.first_name == firstname) {
-      res.json({ status: false, message: "already exist", result: allusers });
-      return;
+      for (var user of allusers) {
+        if (user.first_name == firstname) {
+          res.json({
+            status: false,
+            message: "User already exist",
+            result: allusers,
+          });
+          return;
+        }
+      }
+      var a = { id: id, first_name: firstname, last_name: lastname };
+      id++;
+      allusers.push(a);
     }
-  }
-  var a = { id: id, first_name: firstname, last_name: lastname };
-  id++;
-  allusers.push(a);
 
+    res.json({
+      status: true,
+      message: "User added successfully",
+      result: allusers,
+    });
+  } catch (ex) {
+    res.json({
+      status: true,
+      message: ex.message,
+      result: allusers,
+    });
+  }
+});
+app.post("/api/adduser", (req, res) => {
+  var name = req.body.name;
+  var email = req.body.email;
+  var mob = req.body.mob_no;
+  var password = req.body.password;
+
+  var query =
+    "insert into users (name,email,mob,password) values (" +
+    "'" +
+    name +
+    "','" +
+    email +
+    "'," +
+    mob +
+    ",'" +
+    password +
+    "')";
+
+  dbConnector.perfromDBOperation(query, (err, result) => {
+    if (err) {
+      console.log(err);
+      res.json({ status: false, message: "User not added successfully" });
+    } else {
+      console.log(result);
+      res.json({ status: true, message: "User added successfully" });
+    }
+  });
+});
+app.delete("/user", (req, res) => {
+  // res.setHeader("Access-Control-Allow-Origin", "http://localhost:3001");
+  var id = req.body.id;
+  delete allusers[id];
   res.json({
     status: true,
-    message: "User added successfully",
+    message: "user id=" + id + " deleted",
     result: allusers,
   });
 });
